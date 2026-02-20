@@ -1,6 +1,14 @@
 name: AWS OIDC Deployment
 
 on:
+  workflow_call:
+    inputs:
+      # REQUIRED
+      environment:
+        type: string
+        description: 'El entorno al que deseas desplegar (ej: develop, staging, production)'
+        required: true
+        default: 'develop'
   workflow_dispatch: 
 
 # GITHUB_TOKEN necesita permisos para solicitar el JWT al proveedor de OIDC.
