@@ -79,7 +79,13 @@ jobs:
   terragrunt-plan:
     environment: develop
     needs: get-modified-files
+    if: needs.get-modified-files.outputs.has_changes == 'true'
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        directory: ${{ fromJSON(needs.get-modified-files.outputs.matrix) }}
+
     steps:
       - name: Descargar el código
         uses: actions/checkout@v4
@@ -110,7 +116,7 @@ jobs:
           # Extract account name from path (e.g., aws/RetornaDev/us-east-1 -> RetornaDev)
           ACCOUNT_DIR=$(echo "$WORK_DIR" | cut -d'/' -f2)
           echo "account_directory=$ACCOUNT_DIR" >> $GITHUB_OUTPUT
-
+          
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
         with:
