@@ -78,6 +78,7 @@ jobs:
   # ===========================================
   terragrunt-plan:
     environment: develop
+    needs: get-modified-files
     runs-on: ubuntu-latest
     steps:
       - name: Descargar el código
