@@ -1,0 +1,161 @@
+name: Terragrunt Plan Workflow
+
+on:
+  workflow_call:
+    inputs:
+      # === DEPLOYMENT CONFIGURATION ===
+      environment:
+        type: string
+        description: 'El entorno al que deseas desplegar (ej: develop, staging, production)'
+        required: true
+        default: 'develop'
+      working_directory:
+        description: 'Working directory for Terragrunt commands'
+        required: false
+        type: string
+        default: 'aws'
+
+      # === TOOL VERSIONS ===
+      tf_version:
+        description: 'Terraform version'
+        required: false
+        type: string
+        default: '1.10.3'
+      tg_version:
+        description: 'Terragrunt version'
+        required: false
+        type: string
+        default: '0.69.11'
+  workflow_dispatch: 
+
+# GITHUB_TOKEN necesita permisos para solicitar el JWT al proveedor de OIDC.
+permissions:
+  id-token: write   # Necesario para OIDC
+  contents: read    # Necesario para hacer checkout del código
+
+jobs:
+  # ===========================================
+  # 1. DETECT MODIFIED FILES
+  # ===========================================
+  get-modified-files:
+    name: Detect Modified Terragrunt Files
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.get-terragrunt-dirs.outputs.matrix }}
+      has_changes: ${{ steps.get-terragrunt-dirs.outputs.has_changes }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Get changed terragrunt files
+        id: changed-terragrunt-files
+        uses: tj-actions/changed-files@v45
+        with:
+          files: |
+            aws/**/terragrunt.hcl
+          files_ignore: |
+            aws/_envcommon/**
+
+      - name: Get directories with terragrunt changes
+        id: get-terragrunt-dirs
+        run: |
+          if [ -z "${{ steps.changed-terragrunt-files.outputs.all_changed_files }}" ]; then
+            echo "has_changes=false" >> $GITHUB_OUTPUT
+            echo "matrix=[]" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+
+          matrix_json=$(echo "${{ steps.changed-terragrunt-files.outputs.all_changed_files }}" | \
+            tr ' ' '\n' | xargs -I {} dirname {} | sort -u | jq -R -n '[inputs]')
+
+          echo "has_changes=true" >> $GITHUB_OUTPUT
+          echo "matrix=$(echo "$matrix_json" | jq -c .)" >> $GITHUB_OUTPUT
+
+  # ===========================================
+  # 2. TERRAGRUNT PLAN
+  # ===========================================
+  terragrunt-plan:
+    environment: develop
+    runs-on: ubuntu-latest
+    steps:
+      - name: Descargar el código
+        uses: actions/checkout@v4
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ACTIONS_ROLE_ARN }} # Reemplaza con el ARN de tu rol
+          aws-region: eu-north-1 # Reemplaza con tu región de AWS
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ inputs.tf_version }}
+
+      - name: Setup Terragrunt
+        run: |
+          sudo wget -q -O /bin/terragrunt "https://github.com/gruntwork-io/terragrunt/releases/download/v${{ inputs.tg_version }}/terragrunt_linux_amd64"
+          sudo chmod +x /bin/terragrunt
+
+          # Verify installation
+          terragrunt --version
+          terraform --version
+          echo "::endgroup::"
+
+      - name: Verify AWS credentials
+        run: |
+          echo "::group::AWS Identity"
+          aws sts get-caller-identity
+          echo "::endgroup::"
+        working-directory: .
+
+      - name: Terragrunt Format Check
+        id: fmt
+        continue-on-error: true
+        working-directory: ${{ steps.set-directory.outputs.working_directory }}
+        run: |
+          echo "::group::Checking Terragrunt formatting"
+          terragrunt hclfmt --terragrunt-check
+          echo "::endgroup::"
+
+      - name: Terragrunt Validate
+        id: validate
+        working-directory: ${{ steps.set-directory.outputs.working_directory }}
+        run: |
+          echo "::group::Validating Terragrunt configuration"
+          terragrunt validate --terragrunt-non-interactive
+          echo "::endgroup::"
+
+      - name: Terragrunt Plan
+        id: run-plan
+        working-directory: ${{ matrix.directory }}
+        run: |
+          PLAN_FILE_ABS="$(pwd)/tfplan"
+          echo "PLAN_PATH=$PLAN_FILE_ABS" >> $GITHUB_ENV
+          
+          echo "::notice::Ejecutando plan y guardando en: $PLAN_FILE_ABS"
+          
+          # El flag --terragrunt-working-dir asegura que el contexto sea el correcto
+          terragrunt plan --terragrunt-non-interactive -input=false -out="$PLAN_FILE_ABS"
+          
+          if [ -f "$PLAN_FILE_ABS" ]; then
+            echo "✅ Plan confirmado en: $PLAN_FILE_ABS"
+            ls -lh "$PLAN_FILE_ABS"
+          else
+            echo "::error::Terragrunt dijo exito pero el archivo NO está en $PLAN_FILE_ABS"
+            echo "Buscando dónde quedó el archivo realmente..."
+            find . -name "tfplan"
+            exit 1
+          fi
+
+      - name: Upload Plan Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: tfplan-${{ strategy.job-index }}
+          path: ${{ env.PLAN_PATH }} # Usamos la variable de entorno que definimos arriba
+          retention-days: 1
+          if-no-files-found: error
+          
+      # A partir de aquí, añade tus pasos de despliegue (ej: aws s3 sync, docker push, etc.)
