@@ -96,6 +96,7 @@ jobs:
       - name: Set working directory
         id: set-directory
         run: |
+          echo "ESTE ES EL VALOR DE LA MATRIZ: ${{ matrix.directory }}"
           WORK_DIR="${{ matrix.directory }}"
           echo "working_directory=$WORK_DIR" >> $GITHUB_OUTPUT
           echo "::notice::Working in directory: $WORK_DIR"
