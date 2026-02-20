@@ -90,6 +90,26 @@ jobs:
           role-to-assume: ${{ secrets.AWS_ACTIONS_ROLE_ARN }} # Reemplaza con el ARN de tu rol
           aws-region: eu-north-1 # Reemplaza con tu región de AWS
 
+      # ===========================================
+      # SET WORKING DIRECTORY FROM MATRIX
+      # ===========================================
+      - name: Set working directory
+        id: set-directory
+        run: |
+          WORK_DIR="${{ matrix.directory }}"
+          echo "working_directory=$WORK_DIR" >> $GITHUB_OUTPUT
+          echo "::notice::Working in directory: $WORK_DIR"
+          
+          # Verify directory exists
+          if [ ! -d "$WORK_DIR" ]; then
+            echo "::error::Directory not found: $WORK_DIR"
+            exit 1
+          fi
+          
+          # Extract account name from path (e.g., aws/RetornaDev/us-east-1 -> RetornaDev)
+          ACCOUNT_DIR=$(echo "$WORK_DIR" | cut -d'/' -f2)
+          echo "account_directory=$ACCOUNT_DIR" >> $GITHUB_OUTPUT
+
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
         with:
