@@ -10,6 +10,7 @@ permissions:
 
 jobs:
   deploy-to-aws:
+    environment: develop
     runs-on: ubuntu-latest
     steps:
       - name: Descargar el código
@@ -19,7 +20,7 @@ jobs:
         uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: ${{ secrets.AWS_ACTIONS_ROLE_ARN }} # Reemplaza con el ARN de tu rol
-          aws-region: eu-west-1 # Reemplaza con tu región de AWS
+          aws-region: eu-north-1 # Reemplaza con tu región de AWS
 
       - name: Probar conexión a AWS
         run: |
