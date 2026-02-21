@@ -115,4 +115,5 @@ jobs:
       - name: Apply terragrunt plan
         working-directory: ${{ matrix.directory }}
         run: |
+          ls -la ${{ matrix.directory }}
           terragrunt apply --terragrunt-non-interactive -input=false -auto-approve tfplan
