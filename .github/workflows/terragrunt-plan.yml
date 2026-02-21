@@ -81,6 +81,8 @@ jobs:
     name: Terragrunt Plan
     needs: get-modified-files
     runs-on: ubuntu-latest
+    outputs:
+      plan_artifact_name: ${{ steps.generate-artifact-name.outputs.artifact_name }}
     if: needs.get-modified-files.outputs.has_changes == 'true'
     strategy:
       fail-fast: false
@@ -239,7 +241,7 @@ jobs:
   # ===========================================
   deploy-aws:
     name: Invoke Terragrunt Apply Workflow
-    needs: [get-modified-files, approval]
+    needs: [get-modified-files, terragrunt-plan, approval]
     if: needs.get-modified-files.outputs.has_changes == 'true'
     strategy:
       fail-fast: false
@@ -248,4 +250,5 @@ jobs:
     uses: ./.github/workflows/terragrunt-apply.yml
     with:
       working_directory: ${{ matrix.directory }}
+      plan_artifact_name: ${{ needs.terragrunt-plan.outputs.plan_artifact_name }}
     secrets: inherit

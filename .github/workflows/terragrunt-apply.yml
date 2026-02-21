@@ -9,7 +9,10 @@ on:
         required: false
         type: string
         default: 'aws'
-
+      plan_artifact_name:
+        description: 'Name of the plan artifact to download (e.g., tfplan-aws-vpc-mock-03)'
+        required: true
+        type: string
       # === TOOL VERSIONS ===
       tf_version:
         description: 'Terraform version'
@@ -114,4 +117,4 @@ jobs:
       # ===========================================      
       - name: Apply terragrunt plan
         working-directory: ${{ matrix.directory }}
-        run: terragrunt apply --terragrunt-non-interactive -input=false -auto-approve tfplan
+        run: terragrunt apply --terragrunt-non-interactive -input=false -auto-approve 
