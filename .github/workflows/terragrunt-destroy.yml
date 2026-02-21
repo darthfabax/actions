@@ -82,9 +82,7 @@ jobs:
         id: run-plan
         working-directory: ${{ github.event.inputs.destroy_directory }}
         run: |
-
-          # El flag --terragrunt-working-dir asegura que el contexto sea el correcto
-          terragrunt plan --terragrunt-non-interactive -input=false"
+            terragrunt plan --terragrunt-non-interactive -input=false"
 
       # ===========================================
       # TERRAGRUNT DESTROY
