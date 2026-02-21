@@ -85,7 +85,7 @@ jobs:
       fail-fast: false
       matrix:
         directory: ${{ fromJSON(needs.get-modified-files.outputs.matrix) }}
-
+    
     steps:
       # ===========================================
       # CHECKOUT
@@ -177,7 +177,7 @@ jobs:
       # ===========================================  
       - name: Terragrunt Plan
         id: run-plan
-        working-directory: ${{ matrix.directory }}
+        working-directory: ${{ steps.set-directory.outputs.working_directory }}
         run: |
           PLAN_FILE_ABS="$(pwd)/tfplan"
           echo "PLAN_PATH=$PLAN_FILE_ABS" >> $GITHUB_ENV
@@ -228,9 +228,14 @@ jobs:
   # ===========================================
   deploy-aws:
     name: Deploy AWS Resources
-    needs: [terragrunt-plan, approval]
+    needs: [get-modified-files, approval]
+    if: needs.get-modified-files.outputs.has_changes == 'true'
+    strategy:
+      fail-fast: false
+      matrix:
+        directory: ${{ fromJSON(needs.get-modified-files.outputs.matrix) }}
     uses: ./.github/workflows/terragrunt-apply.yml
     with:
-      working_directory: 'aws'
+      working_directory: ${{ matrix.directory }}
       environment: ${{ inputs.environment }}
     secrets: inherit
