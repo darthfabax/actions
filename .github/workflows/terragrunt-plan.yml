@@ -48,6 +48,7 @@ jobs:
     outputs:
       matrix: ${{ steps.get-terragrunt-dirs.outputs.matrix }}
       has_changes: ${{ steps.get-terragrunt-dirs.outputs.has_changes }}
+    
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -92,127 +93,129 @@ jobs:
         directory: ${{ fromJSON(needs.get-modified-files.outputs.matrix) }}
     
     steps:
-      # ===========================================
-      # CHECKOUT
-      # ===========================================   
-      - name: Checkout
-        uses: actions/checkout@v4
+    # ===========================================
+    # CHECKOUT
+    # ===========================================   
+    - name: Checkout
+      uses: actions/checkout@v4
 
-      # ===========================================
-      # SET WORKING DIRECTORY FROM MATRIX
-      # ===========================================
-      - name: Set working directory
-        id: set-directory
-        run: |
-          echo "ESTE ES EL VALOR DE LA MATRIZ: ${{ matrix.directory }}"
-          WORK_DIR="${{ matrix.directory }}"
-          echo "working_directory=$WORK_DIR" >> $GITHUB_OUTPUT
-          echo "::notice::Working in directory: $WORK_DIR"
-          
-          # Verify directory exists
-          if [ ! -d "$WORK_DIR" ]; then
-            echo "::error::Directory not found: $WORK_DIR"
-            exit 1
-          fi
-          
-          # Extract account name from path (e.g., aws/RetornaDev/us-east-1 -> RetornaDev)
-          ACCOUNT_DIR=$(echo "$WORK_DIR" | cut -d'/' -f2)
-          echo "account_directory=$ACCOUNT_DIR" >> $GITHUB_OUTPUT
+    # ===========================================
+    # SET WORKING DIRECTORY FROM MATRIX
+    # ===========================================
+    - name: Set Working Directory
+      id: set-working-directory
+      run: |
+        echo "ESTE ES EL VALOR DE LA MATRIZ: ${{ matrix.directory }}"
+        WORK_DIR="${{ matrix.directory }}"
+        echo "working_directory=$WORK_DIR" >> $GITHUB_OUTPUT
+        echo "::notice::Working in directory: $WORK_DIR"
+        
+        # Verify directory exists
+        if [ ! -d "$WORK_DIR" ]; then
+          echo "::error::Directory not found: $WORK_DIR"
+          exit 1
+        fi
+        
+        # Extract account name from path (e.g., aws/RetornaDev/us-east-1 -> RetornaDev)
+        ACCOUNT_DIR=$(echo "$WORK_DIR" | cut -d'/' -f2)
+        echo "account_directory=$ACCOUNT_DIR" >> $GITHUB_OUTPUT
 
-      # ===========================================
-      # SETUP TERRAFORM
-      # ===========================================     
-      - name: Setup Terraform
-        uses: hashicorp/setup-terraform@v3
-        with:
-          terraform_version: ${{ inputs.tf_version }}
+    # ===========================================
+    # SETUP TERRAFORM
+    # ===========================================     
+    - name: Setup Terraform
+      id: setup-terraform
+      uses: hashicorp/setup-terraform@v3
+      with:
+        terraform_version: ${{ inputs.tf_version }}
 
-      # ===========================================
-      # SETUP TERRAGRUNT
-      # ===========================================  
-      - name: Setup Terragrunt
-        run: |
-          sudo wget -q -O /bin/terragrunt "https://github.com/gruntwork-io/terragrunt/releases/download/v${{ inputs.tg_version }}/terragrunt_linux_amd64"
-          sudo chmod +x /bin/terragrunt
+    # ===========================================
+    # SETUP TERRAGRUNT
+    # ===========================================  
+    - name: Setup Terragrunt
+      id: setup-terragrunt
+      run: |
+        sudo wget -q -O /bin/terragrunt "https://github.com/gruntwork-io/terragrunt/releases/download/v${{ inputs.tg_version }}/terragrunt_linux_amd64"
+        sudo chmod +x /bin/terragrunt
 
-          # Verify installation
-          terragrunt --version
-          terraform --version
-          echo "::endgroup::"
+        # Verify installation
+        terragrunt --version
+        terraform --version
+        echo "::endgroup::"
 
-      # ===========================================
-      # CONFIGURE AWS CREDENTIALS
-      # ===========================================  
-      - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          role-to-assume: ${{ secrets.AWS_ACTIONS_ROLE_ARN }} # Reemplaza con el ARN de tu rol
-          aws-region: eu-north-1 # Reemplaza con tu región de AWS
+    # ===========================================
+    # CONFIGURE AWS CREDENTIALS
+    # ===========================================  
+    - name: Configure AWS Credentials
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        role-to-assume: ${{ secrets.AWS_ACTIONS_ROLE_ARN }} # Reemplaza con el ARN de tu rol
+        aws-region: eu-north-1 # Reemplaza con tu región de AWS
 
-      - name: Verify AWS credentials
-        run: |
-          echo "::group::AWS Identity"
-          aws sts get-caller-identity
-          echo "::endgroup::"
-        working-directory: .
+    - name: Verify AWS credentials
+      run: |
+        echo "::group::AWS Identity"
+        aws sts get-caller-identity
+        echo "::endgroup::"
+      working-directory: .
 
-      # ===========================================
-      # TERRAGRUNT FMT AND VALIDATE
-      # ===========================================  
+    # ===========================================
+    # TERRAGRUNT FMT AND VALIDATE
+    # ===========================================  
+    - name: Terragrunt Format Check
+      id: terragrunt-fmt
+      continue-on-error: true
+      working-directory: ${{ steps.set-working-directory.outputs.working_directory }}
+      run: |
+        echo "::group::Checking Terragrunt formatting"
+        terragrunt hclfmt --terragrunt-check
+        echo "::endgroup::"
 
-      - name: Terragrunt Format Check
-        id: fmt
-        continue-on-error: true
-        working-directory: ${{ steps.set-directory.outputs.working_directory }}
-        run: |
-          echo "::group::Checking Terragrunt formatting"
-          terragrunt hclfmt --terragrunt-check
-          echo "::endgroup::"
+    - name: Terragrunt Validate
+      id: terragrunt-validate
+      working-directory: ${{ steps.set-working-directory.outputs.working_directory }}
+      run: |
+        echo "::group::Validating Terragrunt configuration"
+        terragrunt validate --terragrunt-non-interactive
+        echo "::endgroup::"
 
-      - name: Terragrunt Validate
-        id: validate
-        working-directory: ${{ steps.set-directory.outputs.working_directory }}
-        run: |
-          echo "::group::Validating Terragrunt configuration"
-          terragrunt validate --terragrunt-non-interactive
-          echo "::endgroup::"
+    # ===========================================
+    # TERRAGRUNT PLAN
+    # ===========================================  
+    - name: Terragrunt Plan
+      id: terragrunt-plan
+      working-directory: ${{ steps.set-working-directory.outputs.working_directory }}
+      run: |
+        PLAN_FILE_ABS="$(pwd)/tfplan"
+        echo "PLAN_PATH=$PLAN_FILE_ABS" >> $GITHUB_ENV
+        echo "plan_path=$PLAN_FILE_ABS" >> $GITHUB_OUTPUT
+        
+        echo "::notice::Ejecutando plan y guardando en: $PLAN_FILE_ABS"
+        
+        # El flag --terragrunt-working-dir asegura que el contexto sea el correcto
+        terragrunt plan --terragrunt-non-interactive -input=false -out="$PLAN_FILE_ABS"
+        
+        if [ -f "$PLAN_FILE_ABS" ]; then
+          echo "✅ Plan confirmado en: $PLAN_FILE_ABS"
+          ls -lh "$PLAN_FILE_ABS"
+        else
+          echo "::error::Terragrunt dijo exito pero el archivo NO está en $PLAN_FILE_ABS"
+          echo "Buscando dónde quedó el archivo realmente..."
+          find . -name "tfplan"
+          exit 1
+        fi
 
-      # ===========================================
-      # TERRAGRUNT PLAN
-      # ===========================================  
-      - name: Terragrunt Plan
-        id: run-plan
-        working-directory: ${{ steps.set-directory.outputs.working_directory }}
-        run: |
-          PLAN_FILE_ABS="$(pwd)/tfplan"
-          echo "PLAN_PATH=$PLAN_FILE_ABS" >> $GITHUB_ENV
-          echo "plan_path=$PLAN_FILE_ABS" >> $GITHUB_OUTPUT
-          
-          echo "::notice::Ejecutando plan y guardando en: $PLAN_FILE_ABS"
-          
-          # El flag --terragrunt-working-dir asegura que el contexto sea el correcto
-          terragrunt plan --terragrunt-non-interactive -input=false -out="$PLAN_FILE_ABS"
-          
-          if [ -f "$PLAN_FILE_ABS" ]; then
-            echo "✅ Plan confirmado en: $PLAN_FILE_ABS"
-            ls -lh "$PLAN_FILE_ABS"
-          else
-            echo "::error::Terragrunt dijo exito pero el archivo NO está en $PLAN_FILE_ABS"
-            echo "Buscando dónde quedó el archivo realmente..."
-            find . -name "tfplan"
-            exit 1
-          fi
-
-      # ===========================================
-      # UPLOAD PLAN ARTIFACT
-      # ===========================================  
-      - name: Upload Plan Artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: tfplan-${{ strategy.job-index }}
-          path: ${{ steps.run-plan.outputs.plan_path }}
-          retention-days: 1
-          if-no-files-found: error
+    # ===========================================
+    # UPLOAD PLAN ARTIFACT
+    # ===========================================  
+    - name: Upload Plan Artifact
+      id: upload-terragrunt-plan
+      uses: actions/upload-artifact@v4
+      with:
+        name: tfplan-${{ strategy.job-index }}
+        path: ${{ steps.terragrunt-plan.outputs.plan_path }}
+        retention-days: 1
+        if-no-files-found: error
 
   # ===========================================
   # 3. APPROVAL GATE
@@ -225,7 +228,8 @@ jobs:
     environment: ${{ inputs.deploy-approval-environment }}
 
     steps:
-    - name: Successful Plan - Awaiting Approval
+    - name: Successful Plan - Wait For Approval
+      id: wait-for-approval
       run: echo "✅ The reviewer has approved the plan."
 
   # ===========================================
