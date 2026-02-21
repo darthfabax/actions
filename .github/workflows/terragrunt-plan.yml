@@ -97,7 +97,7 @@ jobs:
     # ===========================================
     # SET WORKING DIRECTORY FROM MATRIX
     # ===========================================
-    - name: Set Working Directory
+    - name: Set working directory
       id: set-working-directory
       run: |
         echo "ESTE ES EL VALOR DE LA MATRIZ: ${{ matrix.directory }}"
@@ -118,7 +118,7 @@ jobs:
     # ===========================================
     # SETUP TERRAFORM
     # ===========================================     
-    - name: Setup Terraform
+    - name: Setup terraform
       id: setup-terraform
       uses: hashicorp/setup-terraform@v3
       with:
@@ -127,7 +127,7 @@ jobs:
     # ===========================================
     # SETUP TERRAGRUNT
     # ===========================================  
-    - name: Setup Terragrunt
+    - name: Setup terragrunt
       id: setup-terragrunt
       run: |
         sudo wget -q -O /bin/terragrunt "https://github.com/gruntwork-io/terragrunt/releases/download/v${{ inputs.tg_version }}/terragrunt_linux_amd64"
@@ -141,7 +141,7 @@ jobs:
     # ===========================================
     # CONFIGURE AWS CREDENTIALS
     # ===========================================  
-    - name: Configure AWS Credentials
+    - name: Configure AWS credentials
       uses: aws-actions/configure-aws-credentials@v4
       with:
         role-to-assume: ${{ secrets.AWS_ACTIONS_ROLE_ARN }} # Reemplaza con el ARN de tu rol
@@ -157,7 +157,7 @@ jobs:
     # ===========================================
     # TERRAGRUNT FMT AND VALIDATE
     # ===========================================  
-    - name: Terragrunt Format Check
+    - name: Terragrunt fmt
       id: terragrunt-fmt
       continue-on-error: true
       working-directory: ${{ steps.set-working-directory.outputs.working_directory }}
@@ -166,7 +166,7 @@ jobs:
         terragrunt hclfmt --terragrunt-check
         echo "::endgroup::"
 
-    - name: Terragrunt Validate
+    - name: Terragrunt validate
       id: terragrunt-validate
       working-directory: ${{ steps.set-working-directory.outputs.working_directory }}
       run: |
@@ -177,7 +177,7 @@ jobs:
     # ===========================================
     # TERRAGRUNT PLAN
     # ===========================================  
-    - name: Terragrunt Plan
+    - name: Terragrunt plan
       id: terragrunt-plan
       working-directory: ${{ steps.set-working-directory.outputs.working_directory }}
       run: |
@@ -203,7 +203,7 @@ jobs:
     # ===========================================
     # UPLOAD PLAN ARTIFACT
     # ===========================================  
-    - name: Upload Plan Artifact
+    - name: Upload plan artifact
       id: upload-terragrunt-plan
       uses: actions/upload-artifact@v4
       with:
@@ -223,7 +223,7 @@ jobs:
     environment: ${{ inputs.deploy-approval-environment }}
 
     steps:
-    - name: Successful Plan - Wait For Approval
+    - name: Successful plan - wait for approval
       id: wait-for-approval
       run: echo "✅ The reviewer has approved the plan."
 
