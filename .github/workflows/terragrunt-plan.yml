@@ -4,11 +4,6 @@ on:
   workflow_call:
     inputs:
       # === DEPLOYMENT CONFIGURATION ===
-      environment:
-        type: string
-        description: 'El entorno al que deseas desplegar (ej: develop, staging, production)'
-        required: true
-        default: 'develop'
       deploy-approval-environment:
         type: string
         description: 'El entorno para la etapa de aprobación (ej: develop, staging, production)'
@@ -246,5 +241,4 @@ jobs:
     uses: ./.github/workflows/terragrunt-apply.yml
     with:
       working_directory: ${{ matrix.directory }}
-      environment: ${{ inputs.environment }}
     secrets: inherit

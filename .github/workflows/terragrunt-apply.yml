@@ -4,11 +4,6 @@ on:
   workflow_call:
     inputs:
       # === DEPLOYMENT CONFIGURATION ===
-      environment:
-        type: string
-        description: 'El entorno al que deseas desplegar (ej: develop, staging, production)'
-        required: true
-        default: 'develop'
       working_directory:
         description: 'Working directory for Terragrunt commands'
         required: false
