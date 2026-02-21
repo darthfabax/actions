@@ -236,7 +236,7 @@ jobs:
   # 4. DEPLOY AWS RESOURCE
   # ===========================================
   deploy-aws:
-    name: Deploy AWS Resources
+    name: Invoke Terragrunt Apply Workflow
     needs: [get-modified-files, approval]
     if: needs.get-modified-files.outputs.has_changes == 'true'
     strategy:
