@@ -82,7 +82,9 @@ jobs:
         id: run-plan
         working-directory: ./${{ github.event.inputs.destroy_directory }}
         run: |
-            terragrunt plan --terragrunt-non-interactive -input=false"
+            echo "🔥 Starting plan of: ${{ github.event.inputs.destroy_directory }}"
+            terragrunt plan --terragrunt-non-interactive -input=false
+            echo "🔥 Starting plan of: ${{ github.event.inputs.destroy_directory }}"
 
       # ===========================================
       # TERRAGRUNT DESTROY
