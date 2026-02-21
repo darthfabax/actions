@@ -1,4 +1,4 @@
-name: Terragrunt Plan Workflow
+name: Terragrunt Destroy Workflow
 
 on:
   workflow_call:
@@ -140,8 +140,8 @@ jobs:
         - name: Configure AWS Credentials
           uses: aws-actions/configure-aws-credentials@v4
           with:
-            role-to-assume: ${{ secrets.AWS_ACTIONS_ROLE_ARN }} # Reemplaza con el ARN de tu rol
-            aws-region: eu-north-1 # Reemplaza con tu región de AWS
+            role-to-assume: ${{ secrets.AWS_ACTIONS_ROLE_ARN }}
+            aws-region: ${{ inputs.aws_region }}
             role-session-name: github-actions-terragrunt-destroy
             
         - name: Verify AWS credentials
