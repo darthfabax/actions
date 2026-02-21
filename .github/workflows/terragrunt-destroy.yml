@@ -38,7 +38,7 @@ jobs:
 
       # ===========================================
       # CHECKOUT
-      # ===========================================   
+      # ===========================================
       - name: Checkout
         uses: actions/checkout@v4
 
@@ -80,7 +80,7 @@ jobs:
       # ===========================================
       - name: Terragrunt Plan
         id: run-plan
-        working-directory: ${{ matrix.directory }}
+        working-directory: ${{ github.event.inputs.destroy_directory }}
         run: |
           PLAN_FILE_ABS="$(pwd)/tfplan"
           echo "PLAN_PATH=$PLAN_FILE_ABS" >> $GITHUB_ENV
@@ -99,7 +99,6 @@ jobs:
             find . -name "tfplan"
             exit 1
           fi
-
 
       # ===========================================
       # TERRAGRUNT DESTROY
