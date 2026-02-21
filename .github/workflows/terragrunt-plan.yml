@@ -138,6 +138,12 @@ jobs:
       # ===========================================
       # CONFIGURE AWS CREDENTIALS
       # ===========================================  
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ACTIONS_ROLE_ARN }} # Reemplaza con el ARN de tu rol
+          aws-region: eu-north-1 # Reemplaza con tu región de AWS
+
       - name: Verify AWS credentials
         run: |
           echo "::group::AWS Identity"
