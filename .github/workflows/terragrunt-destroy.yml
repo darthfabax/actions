@@ -1,0 +1,62 @@
+name: Terragrunt Plan Workflow
+
+on:
+  workflow_call:
+    inputs:
+      # === TERRAGRUNT DESTROY CONFIGURATION ===
+      destroy_directory:
+        description: 'Directory to destroy'
+        required: true
+        type: string
+        default: 'aws/<environment>/<region>/resources/<resource>'
+      aws_region:
+        description: 'AWS region for credentials'
+        required: false
+        type: string
+        default: 'eu-north-1'
+
+      # === TOOL VERSIONS ===
+      tf_version:
+        description: 'Terraform version'
+        required: false
+        type: string
+        default: '1.10.3'
+      tg_version:
+        description: 'Terragrunt version'
+        required: false
+        type: string
+        default: '0.69.11'
+
+jobs:
+    # ===========================================
+    # 1. TERRAGRUNT DESTROY
+    # ===========================================
+    terragrunt-destroy:
+      name: Terragrunt Destroy
+      runs-on: ubuntu-latest
+      steps:
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ACTIONS_ROLE_ARN }} 
+          aws-region: ${{ inputs.aws_region }}
+          role-session-name: destroysession
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ inputs.tf_version }}
+
+      - name: Setup Terragrunt
+        run: |
+          sudo wget -q -O /bin/terragrunt "https://github.com/gruntwork-io/terragrunt/releases/download/v${{ inputs.tg_version }}/terragrunt_linux_amd64"
+          sudo chmod +x /bin/terragrunt
+          terragrunt -v
+
+      - name: Terragrunt destroy
+        working-directory: ./${{ github.event.inputs.destroy_directory }}
+        run: |
+          echo "🔥 Starting destroy of: ${{ github.event.inputs.destroy_directory }}"
+          terragrunt destroy -auto-approve --terragrunt-non-interactive
+          echo "✅ Destroy completed for: ${{ github.event.inputs.destroy_directory }}"
