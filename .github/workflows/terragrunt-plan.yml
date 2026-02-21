@@ -157,7 +157,7 @@ jobs:
     # ===========================================
     # TERRAGRUNT FMT AND VALIDATE
     # ===========================================  
-    - name: Terragrunt fmt
+    - name: Format check with terragrunt
       id: terragrunt-fmt
       continue-on-error: true
       working-directory: ${{ steps.set-working-directory.outputs.working_directory }}
@@ -166,7 +166,7 @@ jobs:
         terragrunt hclfmt --terragrunt-check
         echo "::endgroup::"
 
-    - name: Terragrunt validate
+    - name: Validate terragrunt configuration
       id: terragrunt-validate
       working-directory: ${{ steps.set-working-directory.outputs.working_directory }}
       run: |
@@ -177,7 +177,7 @@ jobs:
     # ===========================================
     # TERRAGRUNT PLAN
     # ===========================================  
-    - name: Terragrunt plan
+    - name: Plan with terragrunt
       id: terragrunt-plan
       working-directory: ${{ steps.set-working-directory.outputs.working_directory }}
       run: |

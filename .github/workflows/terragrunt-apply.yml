@@ -111,6 +111,6 @@ jobs:
       # ===========================================
       # APPLY TERRAGRUNT PLAN
       # ===========================================      
-      - name: Terragrunt apply
+      - name: Apply terragrunt plan
         working-directory: ${{ matrix.directory }}
         run: terragrunt apply --terragrunt-non-interactive -input=false -auto-approve tfplan
