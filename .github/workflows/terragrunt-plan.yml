@@ -204,11 +204,17 @@ jobs:
     # ===========================================
     # UPLOAD PLAN ARTIFACT
     # ===========================================  
+    - name: Generate safe artifact name
+      id: generate-artifact-name
+      run: |
+        SAFE_DIR_NAME=$(echo "${{ matrix.directory }}" | tr '/' '-')
+        echo "artifact_name=tfplan-$SAFE_DIR_NAME" >> $GITHUB_OUTPUT
+    
     - name: Upload plan artifact
-      id: upload-terragrunt-plan
+      id: upload-terragrunt-artifact
       uses: actions/upload-artifact@v4
       with:
-        name: tfplan-${{ strategy.job-index }}
+        name: ${{ steps.generate-artifact-name.outputs.artifact_name }}
         path: ${{ steps.terragrunt-plan.outputs.plan_path }}
         retention-days: 1
         if-no-files-found: error
