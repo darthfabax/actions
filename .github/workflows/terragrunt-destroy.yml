@@ -42,23 +42,38 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          role-to-assume: ${{ secrets.AWS_ACTIONS_ROLE_ARN }} 
-          aws-region: ${{ inputs.aws_region }}
-          role-session-name: destroysession
-
+      # ===========================================
+      # SETUP TERRAFORM
+      # ===========================================      
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
         with:
           terraform_version: ${{ inputs.tf_version }}
 
+      # ===========================================
+      # SETUP TERRAGRUNT
+      # ===========================================      
       - name: Setup Terragrunt
         run: |
           sudo wget -q -O /bin/terragrunt "https://github.com/gruntwork-io/terragrunt/releases/download/v${{ inputs.tg_version }}/terragrunt_linux_amd64"
           sudo chmod +x /bin/terragrunt
-          terragrunt -v
+
+      # ===========================================
+      # CONFIGURE AWS CREDENTIALS
+      # ===========================================      
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ACTIONS_ROLE_ARN }} # Reemplaza con el ARN de tu rol
+          aws-region: eu-north-1 # Reemplaza con tu región de AWS
+          role-session-name: github-actions-terragrunt-destroy
+          
+      - name: Verify AWS credentials
+        run: |
+          echo "::group::AWS Identity"
+          aws sts get-caller-identity
+          echo "::endgroup::"
+        working-directory: .
 
       # ===========================================
       # TERRAGRUNT PLAN
