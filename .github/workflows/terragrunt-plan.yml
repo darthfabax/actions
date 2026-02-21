@@ -258,5 +258,4 @@ jobs:
     uses: ./.github/workflows/terragrunt-apply.yml
     with:
       working_directory: ${{ matrix.directory }}
-      # ¡BORRAMOS LA LÍNEA DEL PLAN_ARTIFACT_NAME AQUÍ!
     secrets: inherit
