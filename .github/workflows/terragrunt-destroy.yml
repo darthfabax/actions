@@ -34,7 +34,7 @@ on:
 
 jobs:
     # ===========================================
-    # 1. TERRAGRUNT DESTROY
+    # 1. TERRAGRUNT PLAN
     # ===========================================
     terragrunt-plan:
       name: Terragrunt Plan
@@ -105,7 +105,7 @@ jobs:
         run: echo "✅ The reviewer has approved the plan."
 
     # ===========================================
-    # TERRAGRUNT DESTROY
+    # 3. TERRAGRUNT DESTROY
     # ===========================================
     terragrunt-destroy:
       name: Terragrunt Destroy
@@ -135,9 +135,26 @@ jobs:
             sudo chmod +x /bin/terragrunt
 
         # ===========================================
+        # CONFIGURE AWS CREDENTIALS
+        # ===========================================      
+        - name: Configure AWS Credentials
+          uses: aws-actions/configure-aws-credentials@v4
+          with:
+            role-to-assume: ${{ secrets.AWS_ACTIONS_ROLE_ARN }} # Reemplaza con el ARN de tu rol
+            aws-region: eu-north-1 # Reemplaza con tu región de AWS
+            role-session-name: github-actions-terragrunt-destroy
+            
+        - name: Verify AWS credentials
+          run: |
+            echo "::group::AWS Identity"
+            aws sts get-caller-identity
+            echo "::endgroup::"
+          working-directory: .
+
+        # ===========================================
         # TERRAGRUNT DESTROY
         # ===========================================
-        - name: Terragrunt destroy
+        - name: Terragrunt Destroy
           id : run-destroy
           working-directory: ./${{ github.event.inputs.destroy_directory }}
           run: |
