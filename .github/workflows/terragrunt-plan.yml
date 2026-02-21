@@ -186,17 +186,17 @@ jobs:
           retention-days: 1
           if-no-files-found: error
   
-  apply-plan:
+  terragrunt-apply:
     name: Terragrunt Apply
-    needs: [get-modified-files, plan, terraform-approval]
+    needs: [get-modified-files, terragrunt-plan]
     runs-on: ubuntu-latest
     environment: ${{ inputs.requires_approval == 'true' && inputs.environment || 'none' }}
     strategy:
       fail-fast: false
       matrix:
         directory: ${{ fromJSON(needs.get-modified-files.outputs.matrix) }}
-    
-      steps:
+  
+    steps:
       # ===========================================
       # CHECKOUT
       # ===========================================
