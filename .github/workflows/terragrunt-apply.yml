@@ -9,10 +9,6 @@ on:
         required: false
         type: string
         default: 'aws'
-      plan_artifact_name:
-        description: 'Name of the plan artifact to apply'
-        required: true
-        type: string
       # === TOOL VERSIONS ===
       tf_version:
         description: 'Terraform version'
@@ -106,6 +102,22 @@ jobs:
       # ===========================================
       # DOWNLOAD PLAN ARTIFACT
       # ===========================================      
+      - name: Generate safe artifact name
+        id: generate-artifact-name
+        run: |
+          DIR="${{ matrix.directory }}"
+
+          # 1. Extract last name (e.g., aws/aws-dfbx/eu-north-1/resources/s3/mock -> mock)
+          DIR_NAME=$(basename "$DIR")
+          
+          # 2. Extract resource type from path (e.g., aws/aws-dfbx/eu-north-1/resources/s3/mock -> s3)
+          RESOURCE_TYPE=$(basename $(dirname "$DIR"))
+          
+          ARTIFACT_NAME="tfplan-${RESOURCE_TYPE}-${DIR_NAME}"
+          
+          echo "Artifact generated: $ARTIFACT_NAME"
+          echo "artifact_name=$ARTIFACT_NAME" >> $GITHUB_OUTPUT
+
       - name: Download plan artifact
         uses: actions/download-artifact@v4
         with:
