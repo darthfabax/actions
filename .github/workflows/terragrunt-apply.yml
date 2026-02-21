@@ -117,4 +117,4 @@ jobs:
       # ===========================================      
       - name: Apply terragrunt plan
         working-directory: ${{ matrix.directory }}
-        run: terragrunt apply --terragrunt-non-interactive -input=false -auto-approve 
+        run: terragrunt apply --terragrunt-non-interactive -input=false -auto-approve ${{ inputs.plan_artifact_name }}
