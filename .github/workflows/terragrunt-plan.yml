@@ -79,8 +79,8 @@ jobs:
   terragrunt-plan:
     name: Terragrunt Plan
     needs: get-modified-files
-    if: needs.get-modified-files.outputs.has_changes == 'true'
     runs-on: ubuntu-latest
+    if: needs.get-modified-files.outputs.has_changes == 'true'
     strategy:
       fail-fast: false
       matrix:
@@ -210,68 +210,12 @@ jobs:
           if-no-files-found: error
 
   # ===========================================
-  # 3. TERRAGRUNT APPLY
+  # 3. DEPLOY AWS RESOURCE
   # ===========================================
-  terragrunt-apply:
-    name: Terragrunt Apply
-    needs: [get-modified-files, terragrunt-plan]
-    runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        directory: ${{ fromJSON(needs.get-modified-files.outputs.matrix) }}
-  
-    steps:
-      # ===========================================
-      # CHECKOUT
-      # ===========================================   
-      - name: Checkout
-        uses: actions/checkout@v4
-  
-      # ===========================================
-      # SETUP TERRAFORM
-      # ===========================================      
-      - name: Setup Terraform
-        uses: hashicorp/setup-terraform@v3
-        with:
-          terraform_version: ${{ inputs.tf_version }}
-
-      # ===========================================
-      # SETUP TERRAGRUNT
-      # ===========================================      
-      - name: Setup Terragrunt
-        run: |
-          sudo wget -q -O /bin/terragrunt "https://github.com/gruntwork-io/terragrunt/releases/download/v${{ inputs.tg_version }}/terragrunt_linux_amd64"
-          sudo chmod +x /bin/terragrunt
-
-      # ===========================================
-      # CONFIGURE AWS CREDENTIALS
-      # ===========================================      
-      - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          role-to-assume: ${{ secrets.AWS_ACTIONS_ROLE_ARN }} # Reemplaza con el ARN de tu rol
-          aws-region: eu-north-1 # Reemplaza con tu región de AWS
-    
-      - name: Verify AWS credentials
-        run: |
-          echo "::group::AWS Identity"
-          aws sts get-caller-identity
-          echo "::endgroup::"
-        working-directory: .
-
-      # ===========================================
-      # DOWNLOAD PLAN ARTIFACT
-      # ===========================================      
-      - name: Download Plan Artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: tfplan-${{ strategy.job-index }}
-          path: ${{ matrix.directory }}
-
-      # ===========================================
-      # APPLY TERRAGRUNT PLAN
-      # ===========================================      
-      - name: Terragrunt Apply
-        working-directory: ${{ matrix.directory }}
-        run: terragrunt apply --terragrunt-non-interactive -input=false -auto-approve tfplan
+  deploy-aws:
+    name: Deploy AWS Resources
+    needs: [terragrunt-plan]
+    uses: ./.github/workflows/terragrunt-apply.yml
+    with:
+      working_directory: 'aws'
+    secrets: inherit
