@@ -80,7 +80,7 @@ jobs:
       # ===========================================
       - name: Terragrunt Plan
         id: run-plan
-        working-directory: ${{ github.event.inputs.destroy_directory }}
+        working-directory: ./${{ github.event.inputs.destroy_directory }}
         run: |
             terragrunt plan --terragrunt-non-interactive -input=false"
 
