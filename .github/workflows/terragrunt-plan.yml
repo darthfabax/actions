@@ -185,5 +185,56 @@ jobs:
           path: ${{ env.PLAN_PATH }} # Usamos la variable de entorno que definimos arriba
           retention-days: 1
           if-no-files-found: error
-          
+  
+  apply-plan:
+    name: Terragrunt Apply
+    needs: [get-modified-files, plan, terraform-approval]
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.requires_approval == 'true' && inputs.environment || 'none' }}
+    strategy:
+      fail-fast: false
+      matrix:
+        directory: ${{ fromJSON(needs.get-modified-files.outputs.matrix) }}
+    
+      steps:
+      # ===========================================
+      # CHECKOUT
+      # ===========================================
+      - name: Checkout code
+        uses: actions/checkout@v4
+        
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ inputs.tf_version }}
+
+      - name: Setup Terragrunt
+        run: |
+          sudo wget -q -O /bin/terragrunt "https://github.com/gruntwork-io/terragrunt/releases/download/v${{ inputs.tg_version }}/terragrunt_linux_amd64"
+          sudo chmod +x /bin/terragrunt
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::${{ steps.resolve-account.outputs.aws_account_id }}:role/${{ inputs.role_name }}
+          role-session-name: terraform-deploy-${{ github.run_id }}
+          aws-region: ${{ inputs.aws_region }}
+
+      - name: Verify AWS credentials
+        run: |
+          echo "::group::AWS Identity"
+          aws sts get-caller-identity
+          echo "::endgroup::"
+        working-directory: .
+
+      - name: Download Plan Artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: tfplan-${{ strategy.job-index }}
+          path: ${{ matrix.directory }}
+
+      - name: Terragrunt Apply
+        working-directory: ${{ matrix.directory }}
+        run: terragrunt apply --terragrunt-non-interactive -input=false -auto-approve tfplan
+        
       # A partir de aquí, añade tus pasos de despliegue (ej: aws s3 sync, docker push, etc.)
