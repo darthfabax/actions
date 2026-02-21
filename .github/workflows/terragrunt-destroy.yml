@@ -95,3 +95,14 @@ jobs:
           echo "🔥 Starting destroy of: ${{ github.event.inputs.destroy_directory }}"
           terragrunt destroy --terragrunt-non-interactive -input=false -auto-approve
           echo "✅ Destroy completed for: ${{ github.event.inputs.destroy_directory }}"
+
+      - name: Remove infrastructure code from repository
+        run: |
+          git config --global user.name 'github-actions[bot]'
+          git config --global user.email 'github-actions[bot]@users.noreply.github.com'
+          
+          echo "🗑️ Removing code: ${{ github.event.inputs.destroy_directory }}"
+          git rm -r ${{ github.event.inputs.destroy_directory }}
+          git commit -m "chore: Remove infrastructure code for ${{ github.event.inputs.destroy_directory }}"
+          git push
+          echo "✅ Code removed from repository"
