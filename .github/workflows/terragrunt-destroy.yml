@@ -41,7 +41,7 @@ jobs:
       # ===========================================   
       - name: Checkout
         uses: actions/checkout@v4
-        
+
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
@@ -60,9 +60,38 @@ jobs:
           sudo chmod +x /bin/terragrunt
           terragrunt -v
 
+      # ===========================================
+      # TERRAGRUNT PLAN
+      # ===========================================
+      - name: Terragrunt Plan
+        id: run-plan
+        working-directory: ${{ matrix.directory }}
+        run: |
+          PLAN_FILE_ABS="$(pwd)/tfplan"
+          echo "PLAN_PATH=$PLAN_FILE_ABS" >> $GITHUB_ENV
+          
+          echo "::notice::Ejecutando plan y guardando en: $PLAN_FILE_ABS"
+          
+          # El flag --terragrunt-working-dir asegura que el contexto sea el correcto
+          terragrunt plan --terragrunt-non-interactive -input=false -out="$PLAN_FILE_ABS"
+          
+          if [ -f "$PLAN_FILE_ABS" ]; then
+            echo "✅ Plan confirmado en: $PLAN_FILE_ABS"
+            ls -lh "$PLAN_FILE_ABS"
+          else
+            echo "::error::Terragrunt dijo exito pero el archivo NO está en $PLAN_FILE_ABS"
+            echo "Buscando dónde quedó el archivo realmente..."
+            find . -name "tfplan"
+            exit 1
+          fi
+
+
+      # ===========================================
+      # TERRAGRUNT DESTROY
+      # ===========================================
       - name: Terragrunt destroy
         working-directory: ./${{ github.event.inputs.destroy_directory }}
         run: |
           echo "🔥 Starting destroy of: ${{ github.event.inputs.destroy_directory }}"
-          terragrunt destroy -auto-approve --terragrunt-non-interactive
+          terragrunt destroy --terragrunt-non-interactive -input=false -auto-approve tfplan
           echo "✅ Destroy completed for: ${{ github.event.inputs.destroy_directory }}"
