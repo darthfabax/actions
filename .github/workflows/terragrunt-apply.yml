@@ -9,7 +9,10 @@ on:
         required: false
         type: string
         default: 'aws'
-
+      plan_artifact_name:
+        description: 'Name of the plan artifact to apply'
+        required: true
+        type: string
       # === TOOL VERSIONS ===
       tf_version:
         description: 'Terraform version'
