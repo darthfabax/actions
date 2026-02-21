@@ -121,7 +121,7 @@ jobs:
       - name: Download plan artifact
         uses: actions/download-artifact@v4
         with:
-          name: ${{ inputs.plan_artifact_name }}
+          name: ${{ steps.generate-artifact-name.outputs.artifact_name }}
           path: ${{ matrix.directory }}
 
       # ===========================================
