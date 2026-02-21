@@ -9,6 +9,11 @@ on:
         description: 'El entorno al que deseas desplegar (ej: develop, staging, production)'
         required: true
         default: 'develop'
+      deploy-approval-environment:
+        type: string
+        description: 'El entorno para la etapa de aprobación (ej: develop, staging, production)'
+        required: false
+        default: 'aws-deploy'
       working_directory:
         description: 'Working directory for Terragrunt commands'
         required: false
@@ -217,7 +222,7 @@ jobs:
     needs: [terragrunt-plan, get-modified-files]
     runs-on: ubuntu-latest
     if: needs.get-modified-files.outputs.has_changes == 'true'
-    environment: aws-deploy
+    environment: ${{ inputs.deploy-approval-environment }}
 
     steps:
     - name: Successful Plan - Awaiting Approval
