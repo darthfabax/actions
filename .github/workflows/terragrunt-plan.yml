@@ -209,8 +209,18 @@ jobs:
     - name: Generate safe artifact name
       id: generate-artifact-name
       run: |
-        SAFE_DIR_NAME=$(echo "${{ matrix.directory }}" | tr '/' '-')
-        echo "artifact_name=tfplan-$SAFE_DIR_NAME" >> $GITHUB_OUTPUT
+        DIR="${{ matrix.directory }}"
+
+        # 1. Extract last name (e.g., aws/aws-dfbx/eu-north-1/resources/s3/mock -> mock)
+        DIR_NAME=$(basename "$DIR")
+        
+        # 2. Extract resource type from path (e.g., aws/aws-dfbx/eu-north-1/resources/s3/mock -> s3)
+        RESOURCE_TYPE=$(basename $(dirname "$DIR"))
+        
+        ARTIFACT_NAME="tfplan-${RESOURCE_TYPE}-${DIR_NAME}"
+        
+        echo "Artifact generated: $ARTIFACT_NAME"
+        echo "artifact_name=$ARTIFACT_NAME" >> $GITHUB_OUTPUT
     
     - name: Upload plan artifact
       id: upload-terragrunt-artifact
