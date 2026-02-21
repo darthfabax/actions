@@ -1,0 +1,117 @@
+name: Terragrunt Apply Workflow
+
+on:
+  workflow_call:
+    inputs:
+      # === DEPLOYMENT CONFIGURATION ===
+      working_directory:
+        description: 'Working directory for Terragrunt commands'
+        required: false
+        type: string
+        default: 'aws'
+
+      # === TOOL VERSIONS ===
+      tf_version:
+        description: 'Terraform version'
+        required: false
+        type: string
+        default: '1.10.3'
+      tg_version:
+        description: 'Terragrunt version'
+        required: false
+        type: string
+        default: '0.69.11'
+  workflow_dispatch: 
+
+# === GITHUB_TOKEN needs specific permissions to allow OIDC and checkout ===
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  # ===========================================
+  # 1. TERRAGRUNT APPLY
+  # ===========================================
+  terragrunt-apply:
+    name: Terragrunt Apply
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        directory: ['${{ inputs.working_directory }}']
+  
+    steps:
+      # ===========================================
+      # CHECKOUT
+      # ===========================================   
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # ===========================================
+      # SET WORKING DIRECTORY FROM MATRIX
+      # ===========================================
+      - name: Set working directory
+        id: set-directory
+        run: |
+          WORK_DIR="${{ matrix.directory }}"
+          echo "working_directory=$WORK_DIR" >> $GITHUB_OUTPUT
+          echo "::notice::Working in directory: $WORK_DIR"
+          
+          # Verify directory exists
+          if [ ! -d "$WORK_DIR" ]; then
+            echo "::error::Directory not found: $WORK_DIR"
+            exit 1
+          fi
+          
+          # Extract account name from path (e.g., aws/RetornaDev/us-east-1 -> RetornaDev)
+          ACCOUNT_DIR=$(echo "$WORK_DIR" | cut -d'/' -f2)
+          echo "account_directory=$ACCOUNT_DIR" >> $GITHUB_OUTPUT
+  
+      # ===========================================
+      # SETUP TERRAFORM
+      # ===========================================      
+      - name: Setup terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ inputs.tf_version }}
+
+      # ===========================================
+      # SETUP TERRAGRUNT
+      # ===========================================      
+      - name: Setup terragrunt
+        run: |
+          sudo wget -q -O /bin/terragrunt "https://github.com/gruntwork-io/terragrunt/releases/download/v${{ inputs.tg_version }}/terragrunt_linux_amd64"
+          sudo chmod +x /bin/terragrunt
+
+      # ===========================================
+      # CONFIGURE AWS CREDENTIALS
+      # ===========================================      
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ACTIONS_ROLE_ARN }} # Reemplaza con el ARN de tu rol
+          aws-region: eu-north-1 # Reemplaza con tu región de AWS
+          role-session-name: github-actions-terragrunt-apply
+    
+      - name: Verify AWS credentials
+        run: |
+          echo "::group::AWS Identity"
+          aws sts get-caller-identity
+          echo "::endgroup::"
+        working-directory: .
+
+      # ===========================================
+      # DOWNLOAD PLAN ARTIFACT
+      # ===========================================      
+      - name: Download plan artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: tfplan-${{ strategy.job-index }}
+          path: ${{ matrix.directory }}
+
+      # ===========================================
+      # APPLY TERRAGRUNT PLAN
+      # ===========================================      
+      - name: Apply terragrunt plan
+        working-directory: ${{ matrix.directory }}
+        run: terragrunt apply --terragrunt-non-interactive -input=false -auto-approve tfplan
