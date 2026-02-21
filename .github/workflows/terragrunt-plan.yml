@@ -216,9 +216,7 @@ jobs:
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          role-to-assume: arn:aws:iam::${{ steps.resolve-account.outputs.aws_account_id }}:role/${{ inputs.role_name }}
-          role-session-name: terraform-deploy-${{ github.run_id }}
-          aws-region: ${{ inputs.aws_region }}
+          role-to-assume: ${{ secrets.AWS_ACTIONS_ROLE_ARN }} # Reemplaza con el ARN de tu rol
 
       - name: Verify AWS credentials
         run: |
