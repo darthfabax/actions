@@ -51,6 +51,7 @@ jobs:
       # SETUP TERRAFORM
       # ===========================================      
       - name: Setup Terraform
+        id: setup-terraform
         uses: hashicorp/setup-terraform@v3
         with:
           terraform_version: ${{ inputs.tf_version }}
@@ -59,6 +60,7 @@ jobs:
       # SETUP TERRAGRUNT
       # ===========================================      
       - name: Setup Terragrunt
+        id: setup-terragrunt
         run: |
           sudo wget -q -O /bin/terragrunt "https://github.com/gruntwork-io/terragrunt/releases/download/v${{ inputs.tg_version }}/terragrunt_linux_amd64"
           sudo chmod +x /bin/terragrunt
@@ -84,7 +86,7 @@ jobs:
       # TERRAGRUNT PLAN
       # ===========================================
       - name: Terragrunt Plan
-        id: run-plan
+        id: terragrunt-plan
         working-directory: ./${{ github.event.inputs.destroy_directory }}
         run: |
             echo "🔥 Starting plan of: ${{ github.event.inputs.destroy_directory }}"
@@ -102,6 +104,7 @@ jobs:
 
       steps:
       - name: Successful Plan - Awaiting Approval
+        id: wait-for-approval
         run: echo "✅ The reviewer has approved the plan."
 
     # ===========================================
@@ -122,6 +125,7 @@ jobs:
         # SETUP TERRAFORM
         # ===========================================      
         - name: Setup Terraform
+          id: setup-terraform
           uses: hashicorp/setup-terraform@v3
           with:
             terraform_version: ${{ inputs.tf_version }}
@@ -130,6 +134,7 @@ jobs:
         # SETUP TERRAGRUNT
         # ===========================================      
         - name: Setup Terragrunt
+          id: setup-terragrunt
           run: |
             sudo wget -q -O /bin/terragrunt "https://github.com/gruntwork-io/terragrunt/releases/download/v${{ inputs.tg_version }}/terragrunt_linux_amd64"
             sudo chmod +x /bin/terragrunt
@@ -155,7 +160,7 @@ jobs:
         # TERRAGRUNT DESTROY
         # ===========================================
         - name: Terragrunt Destroy
-          id : run-destroy
+          id : terragrunt-destroy
           working-directory: ./${{ github.event.inputs.destroy_directory }}
           run: |
             echo "🔥 Starting destroy of: ${{ github.event.inputs.destroy_directory }}"
@@ -166,7 +171,7 @@ jobs:
         # REMOVE CODE FROM REPOSITORY
         # ===========================================
         - name: Remove infrastructure code from repository
-          if: steps.run-destroy.outcome == 'success'
+          if: steps.terragrunt-destroy.outcome == 'success'
           run: |
             git config --global user.name 'github-actions[bot]'
             git config --global user.email 'github-actions[bot]@users.noreply.github.com'
