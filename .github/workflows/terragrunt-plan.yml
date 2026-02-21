@@ -219,6 +219,10 @@ jobs:
     if: needs.get-modified-files.outputs.has_changes == 'true'
     environment: aws-deploy
 
+    steps:
+    - name: Successful Plan - Awaiting Approval
+      run: echo "✅ The reviewer has approved the plan."
+
   # ===========================================
   # 4. DEPLOY AWS RESOURCE
   # ===========================================
