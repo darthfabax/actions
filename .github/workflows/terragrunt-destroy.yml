@@ -90,6 +90,7 @@ jobs:
       # TERRAGRUNT DESTROY
       # ===========================================
       - name: Terragrunt destroy
+        id : run-destroy
         working-directory: ./${{ github.event.inputs.destroy_directory }}
         run: |
           echo "🔥 Starting destroy of: ${{ github.event.inputs.destroy_directory }}"
@@ -97,6 +98,7 @@ jobs:
           echo "✅ Destroy completed for: ${{ github.event.inputs.destroy_directory }}"
 
       - name: Remove infrastructure code from repository
+        if: steps.run-destroy.outcome == 'success'
         run: |
           git config --global user.name 'github-actions[bot]'
           git config --global user.email 'github-actions[bot]@users.noreply.github.com'

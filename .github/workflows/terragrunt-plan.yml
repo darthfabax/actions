@@ -181,6 +181,7 @@ jobs:
         run: |
           PLAN_FILE_ABS="$(pwd)/tfplan"
           echo "PLAN_PATH=$PLAN_FILE_ABS" >> $GITHUB_ENV
+          echo "plan_path=$PLAN_FILE_ABS" >> $GITHUB_OUTPUT
           
           echo "::notice::Ejecutando plan y guardando en: $PLAN_FILE_ABS"
           
@@ -204,7 +205,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: tfplan-${{ strategy.job-index }}
-          path: ${{ env.PLAN_PATH }} # Usamos la variable de entorno que definimos arriba
+          path: ${{ steps.run-plan.outputs.plan_path }}
           retention-days: 1
           if-no-files-found: error
 
