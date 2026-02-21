@@ -112,15 +112,6 @@ jobs:
       needs: approval
       runs-on: ubuntu-latest
       steps:
-        - name: Terragrunt destroy
-          id : run-destroy
-          
-          working-directory: ./${{ github.event.inputs.destroy_directory }}
-          run: |
-            echo "🔥 Starting destroy of: ${{ github.event.inputs.destroy_directory }}"
-            terragrunt destroy --terragrunt-non-interactive -input=false -auto-approve
-            echo "✅ Destroy completed for: ${{ github.event.inputs.destroy_directory }}"
-
         # ===========================================
         # CHECKOUT
         # ===========================================
@@ -145,6 +136,17 @@ jobs:
 
         # ===========================================
         # TERRAGRUNT DESTROY
+        # ===========================================
+        - name: Terragrunt destroy
+          id : run-destroy
+          working-directory: ./${{ github.event.inputs.destroy_directory }}
+          run: |
+            echo "🔥 Starting destroy of: ${{ github.event.inputs.destroy_directory }}"
+            terragrunt destroy --terragrunt-non-interactive -input=false -auto-approve
+            echo "✅ Destroy completed for: ${{ github.event.inputs.destroy_directory }}"
+
+        # ===========================================
+        # REMOVE CODE FROM REPOSITORY
         # ===========================================
         - name: Remove infrastructure code from repository
           if: steps.run-destroy.outcome == 'success'
