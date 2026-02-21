@@ -9,6 +9,11 @@ on:
         required: true
         type: string
         default: 'aws/<environment>/<region>/resources/<resource>'
+      deploy-approval-environment:
+        type: string
+        description: 'El entorno para la etapa de aprobación (ej: develop, staging, production)'
+        required: false
+        default: 'aws-deploy'
       aws_region:
         description: 'AWS region for credentials'
         required: false
@@ -31,8 +36,8 @@ jobs:
     # ===========================================
     # 1. TERRAGRUNT DESTROY
     # ===========================================
-    terragrunt-destroy:
-      name: Terragrunt Destroy
+    terragrunt-plan:
+      name: Terragrunt Plan
       runs-on: ubuntu-latest
       steps:
 
@@ -86,25 +91,47 @@ jobs:
             terragrunt plan --terragrunt-non-interactive -input=false
             echo "🔥 Starting plan of: ${{ github.event.inputs.destroy_directory }}"
 
-      # ===========================================
-      # TERRAGRUNT DESTROY
-      # ===========================================
-      - name: Terragrunt destroy
-        id : run-destroy
-        working-directory: ./${{ github.event.inputs.destroy_directory }}
-        run: |
-          echo "🔥 Starting destroy of: ${{ github.event.inputs.destroy_directory }}"
-          terragrunt destroy --terragrunt-non-interactive -input=false -auto-approve
-          echo "✅ Destroy completed for: ${{ github.event.inputs.destroy_directory }}"
+    # ===========================================
+    # 2. APPROVAL GATE
+    # ===========================================
+    approval:
+      name: Manual Approval
+      needs: [terragrunt-plan]
+      runs-on: ubuntu-latest
+      environment: ${{ inputs.deploy-approval-environment }}
 
-      - name: Remove infrastructure code from repository
-        if: steps.run-destroy.outcome == 'success'
-        run: |
-          git config --global user.name 'github-actions[bot]'
-          git config --global user.email 'github-actions[bot]@users.noreply.github.com'
+      steps:
+      - name: Successful Plan - Awaiting Approval
+        run: echo "✅ The reviewer has approved the plan."
+
+    # ===========================================
+    # TERRAGRUNT DESTROY
+    # ===========================================
+    terragrunt-destroy:
+      name: Terragrunt Destroy
+      needs: approval
+      runs-on: ubuntu-latest
+      steps:
+        - name: Terragrunt destroy
+          id : run-destroy
           
-          echo "🗑️ Removing code: ${{ github.event.inputs.destroy_directory }}"
-          git rm -r ${{ github.event.inputs.destroy_directory }}
-          git commit -m "chore: Remove infrastructure code for ${{ github.event.inputs.destroy_directory }}"
-          git push
-          echo "✅ Code removed from repository"
+          working-directory: ./${{ github.event.inputs.destroy_directory }}
+          run: |
+            echo "🔥 Starting destroy of: ${{ github.event.inputs.destroy_directory }}"
+            terragrunt destroy --terragrunt-non-interactive -input=false -auto-approve
+            echo "✅ Destroy completed for: ${{ github.event.inputs.destroy_directory }}"
+
+        # ===========================================
+        # TERRAGRUNT DESTROY
+        # ===========================================
+        - name: Remove infrastructure code from repository
+          if: steps.run-destroy.outcome == 'success'
+          run: |
+            git config --global user.name 'github-actions[bot]'
+            git config --global user.email 'github-actions[bot]@users.noreply.github.com'
+            
+            echo "🗑️ Removing code: ${{ github.event.inputs.destroy_directory }}"
+            git rm -r ${{ github.event.inputs.destroy_directory }}
+            git commit -m "chore: Remove infrastructure code for ${{ github.event.inputs.destroy_directory }}"
+            git push
+            echo "✅ Code removed from repository"
